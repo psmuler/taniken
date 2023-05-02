@@ -42,7 +42,6 @@ startButton.addEventListener('click', () => {
     hideStartScreen();
     gameState = 'playing';
     // ゲーム開始時に最初の障害物生成タイマーを設定
-    console.log("spawning!")
     setTimeout(spawnObstacle, 3000); // 最初の障害物は2秒後に生成
 });
 retryButton.addEventListener('click', () => {
@@ -54,19 +53,14 @@ retryButton.addEventListener('click', () => {
 function showGameOverScreen() {
     gameState = 'gameover';
     gameOverScreen.style.display = 'flex';
-    // ctx.font = '30px Arial';
-    // ctx.fillStyle = 'red';
-    // ctx.fillText('ゲームオーバー', canvas.width / 2 - 70, canvas.height / 2);
     retryButton.style.display = 'block'; // リトライボタンを表示
 }
-
 function hideGameOverScreen() {
     gameOverScreen.style.display = 'none';
 }
 function showStartScreen() {
     startScreen.style.display = 'flex';
 }
-
 function hideStartScreen() {
     startScreen.style.display = 'none';
 }
@@ -91,11 +85,6 @@ obstacleImg.src = 'src/obstacle.png'; // 障害物の画像ファイルへのパ
 const initialPlayerSpeed = 3;
 const initialObstacleSpeed = 5;
 
-function initializeSpeeds() {
-    gameSpeed = 1
-    // obstacle.speed = initialObstacleSpeed;
-}
-
 function updateSpeeds() {
     gameSpeed = Math.max(1 + Math.floor((score - 300) / 300) * 0.2, 1);
 }
@@ -110,10 +99,10 @@ const player = {
     jumping: false,
 };
 const obstacle = {
-    x: canvas.width,
-    y: 320,
     width: 30,
     height: 40,
+    x: canvas.width + this.width,
+    y: 340,
     speed: 5,
 };
 
@@ -132,7 +121,10 @@ canvas.addEventListener('click', () => {
 });
 canvas.addEventListener('touchstart', (event) => {
     event.preventDefault();
-    jump();
+    if (!player.jumping) {
+        player.jumping = true;
+        player.speedY = player.speed;
+    }
 });
 
 function isColliding(obstacles) {
@@ -200,13 +192,13 @@ function resetGame() {
     obstacles.length = 0; // 障害物配列をリセット
     retryButton.style.display = 'none'; // リトライボタンを非表示
     updateHighScore(); // ハイスコアを更新
-    initializeSpeeds();
+    gameSpeed = 1
     score = 0; // スコアをリセット
     gameState = 'playing';
 }
 
 function update() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, canvas.width * 2, canvas.height * 2);
 
     if (gameState === 'playing') {
         if (player.jumping) {
@@ -238,8 +230,10 @@ function update() {
     requestAnimationFrame(update);
 }
 function spawnObstacle() {
-    console.log("spawn!!")
-    createObstacle();
+    if (gameState == "playing") {
+        createObstacle();
+    }
+
 
     // 最小間隔と最大間隔を設定 (ミリ秒単位)
     const minInterval = 1000 / gameSpeed ** 1.5; // 1000ms = 1秒
