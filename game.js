@@ -57,5 +57,51 @@ canvas.addEventListener('click', () => {
         player.jumping = true;
     }
 });
+function isColliding() {
+    if (
+        player.x < obstacle.x + obstacle.width &&
+        player.x + player.width > obstacle.x &&
+        player.y < obstacle.y + obstacle.height &&
+        player.y + player.height > obstacle.y
+    ) {
+        return true;
+    }
+    return false;
+}
+
+function displayGameOver() {
+    ctx.font = '30px Arial';
+    ctx.fillStyle = 'red';
+    ctx.fillText('ゲームオーバー', canvas.width / 2 - 70, canvas.height / 2);
+}
+
+function update() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (player.jumping) {
+        player.y -= player.speed;
+        if (player.y <= 200) {
+            player.jumping = false;
+        }
+    } else {
+        if (player.y < 300) {
+            player.y += player.speed;
+        }
+    }
+
+    obstacle.x -= obstacle.speed;
+    if (obstacle.x <= -obstacle.width) {
+        obstacle.x = canvas.width;
+    }
+
+    if (isColliding()) {
+        displayGameOver();
+        return; // ゲームオーバー時に更新を停止
+    }
+
+    drawPlayer();
+    drawObstacle();
+    requestAnimationFrame(update);
+}
 
 update();
