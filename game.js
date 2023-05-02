@@ -1,5 +1,14 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas(); // 初期サイズ設定
+
 const retryButton = document.getElementById('retryButton');
 const obstacles = [];
 
@@ -10,6 +19,7 @@ let gameSpeed = 1;
 
 const startScreen = document.getElementById('startScreen');
 const startButton = document.getElementById('startButton');
+
 
 function showStartScreen() {
     startScreen.style.display = 'flex';
@@ -97,6 +107,11 @@ function isColliding(obstacles) {
     }
     return false;
 }
+canvas.addEventListener('touchstart', (event) => {
+    event.preventDefault();
+    jump();
+});
+
 
 function random(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
