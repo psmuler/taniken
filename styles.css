@@ -14,3 +14,17 @@ canvas {
     border: 1px solid #000;
     background-color: #fff;
 }
+
+button {
+    font-size: 18px;
+    padding: 10px 20px;
+    border: 1px solid #333;
+    border-radius: 5px;
+    background-color: #f0f0f0;
+    cursor: pointer;
+    margin-top: 20px;
+}
+
+button:hover {
+    background-color: #ccc;
+}
