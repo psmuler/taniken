@@ -1,15 +1,32 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
+const MAX_WIDTH = 800;
+const MAX_HEIGHT = 600;
+
+let gameState = 'start'; // 'start', 'playing', 'gameover' のいずれかの状態を持たせる
+
 function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    const targetWidth = Math.min(window.innerWidth, MAX_WIDTH);
+    const targetHeight = Math.min(window.innerHeight, MAX_HEIGHT);
+    const aspectRatio = targetWidth / targetHeight;
+
+    // ゲームのアスペクト比を維持しながら、ウィンドウに収まるように調整
+    if (window.innerWidth / window.innerHeight < aspectRatio) {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerWidth / aspectRatio;
+    } else {
+        canvas.width = window.innerHeight * aspectRatio;
+        canvas.height = window.innerHeight;
+    }
+    const scaleFactor = canvas.width / MAX_WIDTH; // スケールファクターを計算
+    ctx.scale(scaleFactor, scaleFactor); // 描画スケールを変更
 }
+
 
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas(); // 初期サイズ設定
 
-const retryButton = document.getElementById('retryButton');
 const obstacles = [];
 
 let highScore = localStorage.getItem('highScore') || 0;
@@ -19,8 +36,33 @@ let gameSpeed = 1;
 
 const startScreen = document.getElementById('startScreen');
 const startButton = document.getElementById('startButton');
+const gameOverScreen = document.getElementById('gameOverScreen');
+const retryButton = document.getElementById('retryButton');
+startButton.addEventListener('click', () => {
+    hideStartScreen();
+    gameState = 'playing';
+    // ゲーム開始時に最初の障害物生成タイマーを設定
+    console.log("spawning!")
+    setTimeout(spawnObstacle, 3000); // 最初の障害物は2秒後に生成
+});
+retryButton.addEventListener('click', () => {
+    hideGameOverScreen();
+    console.log("spawn!")
+    resetGame(); // ゲーム状態をリセットする関数
+});
 
+function showGameOverScreen() {
+    gameState = 'gameover';
+    gameOverScreen.style.display = 'flex';
+    // ctx.font = '30px Arial';
+    // ctx.fillStyle = 'red';
+    // ctx.fillText('ゲームオーバー', canvas.width / 2 - 70, canvas.height / 2);
+    retryButton.style.display = 'block'; // リトライボタンを表示
+}
 
+function hideGameOverScreen() {
+    gameOverScreen.style.display = 'none';
+}
 function showStartScreen() {
     startScreen.style.display = 'flex';
 }
@@ -28,11 +70,6 @@ function showStartScreen() {
 function hideStartScreen() {
     startScreen.style.display = 'none';
 }
-startButton.addEventListener('click', () => {
-    hideStartScreen();
-    update();
-});
-
 
 // 画像の読み込み
 const playerFrames = [
@@ -51,18 +88,16 @@ let playerAnimationFrame = 0;
 const obstacleImg = new Image();
 obstacleImg.src = 'src/obstacle.png'; // 障害物の画像ファイルへのパス
 
-const initialPlayerSpeed = 5;
+const initialPlayerSpeed = 3;
 const initialObstacleSpeed = 5;
 
 function initializeSpeeds() {
-    player.speed = initialPlayerSpeed;
+    gameSpeed = 1
     // obstacle.speed = initialObstacleSpeed;
 }
 
 function updateSpeeds() {
-    gameSpeed = 1 + Math.floor(score / 300) * 0.2;
-    player.speed = initialPlayerSpeed * gameSpeed;
-    // obstacle.speed = initialObstacleSpeed * gameSpeed;
+    gameSpeed = Math.max(1 + Math.floor((score - 300) / 300) * 0.2, 1);
 }
 
 const player = {
@@ -71,6 +106,7 @@ const player = {
     width: 40,
     height: 60,
     speed: 5,
+    speedY: 0,
     jumping: false,
 };
 const obstacle = {
@@ -88,12 +124,17 @@ function drawObstacle(obstacle) {
     ctx.drawImage(obstacleImg, obstacle.x, obstacle.y, obstacle.width, obstacle.height);
 }
 
-
 canvas.addEventListener('click', () => {
     if (!player.jumping) {
         player.jumping = true;
+        player.speedY = player.speed;
     }
 });
+canvas.addEventListener('touchstart', (event) => {
+    event.preventDefault();
+    jump();
+});
+
 function isColliding(obstacles) {
     for (let i = 0; i < obstacles.length; i++) {
         if (
@@ -107,11 +148,6 @@ function isColliding(obstacles) {
     }
     return false;
 }
-canvas.addEventListener('touchstart', (event) => {
-    event.preventDefault();
-    jump();
-});
-
 
 function random(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -122,13 +158,16 @@ function createObstacle() {
         y: 320,
         width: 30,
         height: 40,
+        speed: 5
     };
     obstacles.push(obstacle);
 }
 function updateObstacles() {
     for (let i = 0; i < obstacles.length; i++) {
-        obstacles[i].x -= initialObstacleSpeed * gameSpeed
-
+        obstacles[i].x -= obstacles[i].speed;
+        console.log(obstacles[i].speed)
+        console.log(obstacles[i].x, obstacles[i].y)
+        console.log(player.x, player.y)
         if (obstacles[i].x <= -obstacles[i].width) {
             obstacles.splice(i, 1);
             i--;
@@ -137,6 +176,7 @@ function updateObstacles() {
         }
     }
 }
+
 function displayScore() {
     ctx.font = '20px Arial';
     ctx.fillStyle = 'black';
@@ -153,12 +193,6 @@ function updateHighScore() {
         localStorage.setItem('highScore', highScore);
     }
 }
-function displayGameOver() {
-    ctx.font = '30px Arial';
-    ctx.fillStyle = 'red';
-    ctx.fillText('ゲームオーバー', canvas.width / 2 - 70, canvas.height / 2);
-    retryButton.style.display = 'block'; // リトライボタンを表示
-}
 function resetGame() {
     player.x = 50;
     player.y = 300;
@@ -168,47 +202,48 @@ function resetGame() {
     updateHighScore(); // ハイスコアを更新
     initializeSpeeds();
     score = 0; // スコアをリセット
-    update(); // ゲーム更新を再開
+    gameState = 'playing';
 }
-
-retryButton.addEventListener('click', resetGame);
 
 function update() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    if (player.jumping) {
-        player.y -= player.speed;
-        if (player.y <= 200) {
-            player.jumping = false;
+    if (gameState === 'playing') {
+        if (player.jumping) {
+            player.y -= player.speedY * gameSpeed
+            if (player.y <= 200) {
+                player.speedY = -player.speedY
+            }
+            if (player.speedY < 0 && player.y > 300) {
+                player.speedY = 0
+                player.jumping = false
+            }
         }
-    } else {
-        if (player.y < 300) {
-            player.y += player.speed;
+
+        if (isColliding(obstacles)) {
+            gameState = 'gameover';
+            showGameOverScreen();
         }
-    }
+        else {
+            score++;
+            updateSpeeds();
+        }
+        displayScore();
+        displayHighScore();
 
-    if (isColliding(obstacles)) {
-        displayGameOver();
-        return; // ゲームオーバー時に更新を停止
+        drawPlayer();
+        updateObstacles();
+        updateAnimationFrame();
     }
-    else {
-        score++;
-        updateSpeeds();
-    }
-    displayScore();
-    displayHighScore();
-
-    drawPlayer();
-    updateObstacles();
-    updateAnimationFrame();
     requestAnimationFrame(update);
 }
 function spawnObstacle() {
+    console.log("spawn!!")
     createObstacle();
 
     // 最小間隔と最大間隔を設定 (ミリ秒単位)
-    const minInterval = 1000 / gameSpeed ** 2; // 1000ms = 1秒
-    const maxInterval = 3000 / gameSpeed ** 2; // 3000ms = 3秒
+    const minInterval = 1000 / gameSpeed ** 1.5; // 1000ms = 1秒
+    const maxInterval = 4000 / gameSpeed ** 1.5; // 3000ms = 3秒
 
     // minInterval から maxInterval までのランダムな間隔を計算
     const randomInterval = Math.random() * (maxInterval - minInterval) + minInterval;
@@ -220,5 +255,4 @@ function updateAnimationFrame() {
     playerAnimationFrame = Math.floor(score / 20 * gameSpeed) % playerImages.length;
 }
 
-// ゲーム開始時に最初の障害物生成タイマーを設定
-setTimeout(spawnObstacle, 2000); // 最初の障害物は2秒後に生成
+update();
